@@ -1,0 +1,442 @@
+MPASM  5.44                          MAIN.ASM   12-15-2019  10:40:53         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;============================================================
+                      00002 ; Nombre del Archivo: p16f84.asm
+                      00003 ; Fecha: 1/12/2019
+                      00004 ; Autor: Cristian Gonzalo Vera
+                      00005 ; Procesador: 16f84
+                      00006 ; Referencia del circuito: 
+                      00007 ;============================================================
+                      00008 ; Copyright notice: Plantilla utilizada por IoT lab
+                      00009 ;============================================================
+                      00010 ; Descripcion del programa:
+                      00011 ;
+                      00012 ; 
+                      00013 ;
+                      00014 ;===========================
+                      00015 ; configuracion de fusibles
+                      00016 ;===========================
+                      00017 ; Fusibles usados en __config directive:
+                      00018 
+                      00019 ;
+                      00020 ; Micro. PIC16F84
+                      00021 ; Osc XT
+                      00022 ; Watchdog OFF
+                      00023 ; Code protect ON
+                      00024 ; Power-Up-Timer ON
+                      00025 ;
+                      00026 
+                      00027 ; * _CP_ON Code protection ON/OFF
+                      00028 ;   _CP_OFF
+                      00029 ; * _PWRTE_ON Power-up timer ON/OFF
+                      00030 ;   _PWRTE_OFF
+                      00031 ;   _WDT_ON Watchdog timer ON/OFF
+                      00032 ; * _WDT_OFF
+                      00033 ;   _LP_OSC Low power crystal osccillator
+                      00034 ; * _XT_OSC External parallel resonator
+                      00035 ;   _HS_OSC High speed crystal resonator (8 to 10 MHz)
+                      00036 ;   _RC_OSC Resistor/capacitor oscillator
+                      00037 ;
+                      00038 ;=========================
+                      00039 ; setup y configuraciones
+                      00040 ;=========================
+                      00041       processor PIC16f648
+                      00042 ;      LIST   P=PIC16F648
+                      00043       #include <p16f648A.inc>
+                      00001         LIST
+                      00002 
+                      00003 ;==========================================================================
+                      00004 ;  MPASM PIC16F648A processor include
+                      00005 ; 
+                      00006 ;  (c) Copyright 1999-2012 Microchip Technology, All rights reserved
+                      00007 ;==========================================================================
+                      00008 
+                      00384         LIST
+2007   1F50           00044       __config _CP_ON & _CPD_OFF & _LVP_OFF & _BODEN_ON & _MCLRE_OFF & _PWRTE_ON & _WDTE_OFF & _INTOSC_O
+MPASM  5.44                          MAIN.ASM   12-15-2019  10:40:53         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                            SC_NOCLKOUT
+                      00045 ;=====================================================
+                      00046 ; definicion de constantes
+                      00047 ;=====================================================
+                      00048 
+  00000002            00049 z       equ 02h         ;bandera de cero del registro de estados
+                      00050 
+                      00051 ;=====================================================
+                      00052 ; Registros PIC
+                      00053 ;=====================================================
+                      00054 
+  00000003            00055 status  equ 03h         ;registro de estados
+  00000005            00056 ptoa    equ 05h         ;el puerto A está en la dirección 05 de la RAM
+  00000006            00057 ptob    equ 06h         ;el puerto B está en la dirección 06 de la RAM
+  00000085            00058 trisa   equ 85h         ;registro de configuración del puerto A
+  00000086            00059 trisb   equ 86h         ;registro de configuración del puerto B
+                      00060 
+                      00061 ;=====================================================
+                      00062 ; variables en PIC RAM
+                      00063 ;=====================================================
+                      00064 
+                      00065       cblock 0x20
+  00000020            00066       contb             ;lleva el conteo de pulsaciones
+  00000021            00067       loops             ;utilizado en retardos (milisegundos)
+  00000022            00068       loops2            ;utilizado en retardos
+                      00069       endc
+                      00070 
+                      00071 ;============================================================
+                      00072 ; programa
+                      00073 ;============================================================
+                      00074 
+                      00075 Reset   org 0           ;el vector de reset es la dirección 00
+0000   2???           00076         goto Setup      ;se salta al inicio del programa
+                      00077         
+                      00078         ;org 0x04               ;tratamiento de interrupcciones, en este programa no se utilizan.
+                      00079         ;goto interrupt
+                      00080 
+                      00081 ;
+                      00082 ; subrutinas
+                      00083 ;============================================================
+                      00084 
+                      00085         org 08h         ;inicio de subrutinas 
+                      00086                         ;el programa empieza en la dirección de memoria 8
+                      00087 
+0008                  00088 retardo                 ;subrutina de retardo de 100 milisegundos
+0008   3064           00089          movlw D'100'   ;el registro loops contiene el número
+0009   00A1           00090          movwf loops    ;de milisegundos del retardo
+000A   306E           00091 top2     movlw D'110'   ;
+000B   00A2           00092          movwf loops2   ;
+000C   0000           00093 top      nop
+000D   0000           00094          nop
+000E   0000           00095          nop
+000F   0000           00096          nop
+MPASM  5.44                          MAIN.ASM   12-15-2019  10:40:53         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0010   0000           00097          nop
+0011   0000           00098          nop
+Message[305]: Using default destination of 1 (file).
+0012   0BA2           00099          decfsz loops2  ;pregunta si terminó 1 ms
+0013   2???           00100          goto top
+Message[305]: Using default destination of 1 (file).
+0014   0BA1           00101          decfsz loops   ;pregunta si termina el retardo
+0015   2???           00102          goto top2
+0016   3400           00103          retlw 0
+                      00104         
+                      00105         
+                      00106 ;
+                      00107 ; main o principal
+                      00108 ;============================================================
+                      00109 
+0017                  00110 Setup
+0017   0185           00111          CLRF PORTA             ;Initialize PORTA by;setting;output data latches
+0018   3007           00112          MOVLW 0x07             ; comparadores modo off
+0019   009F           00113          MOVWF CMCON            ; para utilizar el puerto A como I/O
+001A   1303           00114          BCF STATUS, RP1
+001B   1683           00115          BSF STATUS, RP0        ;Selecciono el banco 1
+001C   30FF           00116          MOVLW 0xFF             
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+001D   0085           00117          MOVWF TRISA            ; Se carga el puerto A como entrada, el pin 5 siempre es una entrada.
+001E   3000           00118          MOVLW 0x00
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+001F   0086           00119          MOVWF TRISB            ; Se carga el puerto B como salida 
+                      00120 
+0020   1283           00121          bcf status,5   ;se ubica en el primer banco de memoria RAM
+0021   01A0           00122 Loop     clrf contb     ;inicia contador en cero
+0022   0820           00123 Ciclo    movf contb,w   ;el valor del contador pasa al registro W
+0023   0086           00124          movwf PORTB    ;pasa el valor de W al puerto A (display)
+0024   2???           00125          call retardo   ;retardo esperando que suelten la tecla
+0025   1805           00126 pulsa    btfsc PORTA,0  ;pregunta si el pulsador está oprimido
+0026   2???           00127          goto pulsa     ;si no lo está continúa revisándolo
+0027   2???           00128          call retardo   ;si está oprimido retarda 100 milisegundos
+0028   1805           00129          btfsc PORTA,0  ;para comprobar
+0029   2???           00130          goto pulsa     ;si no lo está vuelve a revisar
+Message[305]: Using default destination of 1 (file).
+002A   0AA0           00131          incf contb     ;si lo confirma incrementa el contador
+002B   0820           00132          movf contb,w   ;carga el registro W con el valor del conteo
+002C   3A0A           00133          xorlw 0ah      ;hace operación xor para ver si es igual a 0ah
+002D   1903           00134          btfsc status,z ;prueba si el contador llegó a 0ah (diez)
+002E   2???           00135          goto Loop      ;si es igual el contador se pone en ceros
+002F   2???           00136          goto Ciclo     ;si no llegó a diez incrementa normalmente
+                      00137 
+                      00138 ;============================================================
+1F50                  00139          end ; END OF PROGRAM
+MPASM  5.44                          MAIN.ASM   12-15-2019  10:40:53         PAGE  4
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ADDEN                             00000003
+ADEN                              00000003
+BRGH                              00000002
+C                                 00000000
+C1INV                             00000004
+C1OUT                             00000006
+C2INV                             00000005
+C2OUT                             00000007
+CCP1CON                           00000017
+CCP1IE                            00000002
+CCP1IF                            00000002
+CCP1M0                            00000000
+CCP1M1                            00000001
+CCP1M2                            00000002
+CCP1M3                            00000003
+CCP1X                             00000005
+CCP1Y                             00000004
+CCPR1                             00000015
+CCPR1H                            00000016
+CCPR1L                            00000015
+CIS                               00000003
+CM0                               00000000
+CM1                               00000001
+CM2                               00000002
+CMCON                             0000001F
+CMIE                              00000006
+CMIF                              00000006
+CREN                              00000004
+CSRC                              00000007
+Ciclo                             00000022
+DATA_CP_OFF                       00003FFF
+DATA_CP_ON                        00003EFF
+DC                                00000001
+EEADR                             0000009B
+EECON1                            0000009C
+EECON2                            0000009D
+EEDATA                            0000009A
+EEIE                              00000007
+EEIF                              00000007
+F                                 00000001
+FERR                              00000002
+FSR                               00000004
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Loop                              00000021
+NOT_BO                            00000000
+NOT_BOD                           00000000
+NOT_BOR                           00000000
+MPASM  5.44                          MAIN.ASM   12-15-2019  10:40:53         PAGE  5
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+NOT_PD                            00000003
+NOT_POR                           00000001
+NOT_RBPU                          00000007
+NOT_T1SYNC                        00000002
+NOT_TO                            00000004
+OERR                              00000001
+OPTION_REG                        00000081
+OSCF                              00000003
+PCL                               00000002
+PCLATH                            0000000A
+PCON                              0000008E
+PEIE                              00000006
+PIE1                              0000008C
+PIR1                              0000000C
+PORTA                             00000005
+PORTB                             00000006
+PR2                               00000092
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+RA0                               00000000
+RA1                               00000001
+RA2                               00000002
+RA3                               00000003
+RA4                               00000004
+RA5                               00000005
+RA6                               00000006
+RA7                               00000007
+RB0                               00000000
+RB1                               00000001
+RB2                               00000002
+RB3                               00000003
+RB4                               00000004
+RB5                               00000005
+RB6                               00000006
+RB7                               00000007
+RBIE                              00000003
+RBIF                              00000000
+RCIE                              00000005
+RCIF                              00000005
+RCREG                             0000001A
+RCSTA                             00000018
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+RX9                               00000006
+RX9D                              00000000
+Reset                             00000000
+SPBRG                             00000099
+SPEN                              00000007
+SREN                              00000005
+STATUS                            00000003
+MPASM  5.44                          MAIN.ASM   12-15-2019  10:40:53         PAGE  6
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+SYNC                              00000004
+Setup                             00000017
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+T1CKPS0                           00000004
+T1CKPS1                           00000005
+T1CON                             00000010
+T1OSCEN                           00000003
+T2CKPS0                           00000000
+T2CKPS1                           00000001
+T2CON                             00000012
+TMR0                              00000001
+TMR0IE                            00000005
+TMR0IF                            00000002
+TMR1                              0000000E
+TMR1CS                            00000001
+TMR1H                             0000000F
+TMR1IE                            00000000
+TMR1IF                            00000000
+TMR1L                             0000000E
+TMR1ON                            00000000
+TMR2                              00000011
+TMR2IE                            00000001
+TMR2IF                            00000001
+TMR2ON                            00000002
+TOUTPS0                           00000003
+TOUTPS1                           00000004
+TOUTPS2                           00000005
+TOUTPS3                           00000006
+TRISA                             00000085
+TRISA0                            00000000
+TRISA1                            00000001
+TRISA2                            00000002
+TRISA3                            00000003
+TRISA4                            00000004
+TRISA5                            00000005
+TRISA6                            00000006
+TRISA7                            00000007
+TRISB                             00000086
+TRISB0                            00000000
+TRISB1                            00000001
+TRISB2                            00000002
+TRISB3                            00000003
+TRISB4                            00000004
+TRISB5                            00000005
+TRISB6                            00000006
+TRISB7                            00000007
+TRMT                              00000001
+TX9                               00000006
+TX9D                              00000000
+TXEN                              00000005
+MPASM  5.44                          MAIN.ASM   12-15-2019  10:40:53         PAGE  7
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TXIE                              00000004
+TXIF                              00000004
+TXREG                             00000019
+TXSTA                             00000098
+VR0                               00000000
+VR1                               00000001
+VR2                               00000002
+VR3                               00000003
+VRCON                             0000009F
+VREN                              00000007
+VROE                              00000006
+VRR                               00000005
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_BODEN_OFF                        00003FBF
+_BODEN_ON                         00003FFF
+_BOREN_OFF                        00003FBF
+_BOREN_ON                         00003FFF
+_CONFIG                           00002007
+_CPD_OFF                          00003FFF
+_CPD_ON                           00003EFF
+_CP_OFF                           00003FFF
+_CP_ON                            00001FFF
+_DEVID1                           00002006
+_ER_OSC_CLKOUT                    00003FFF
+_ER_OSC_NOCLKOUT                  00003FFE
+_EXTCLK_OSC                       00003FEF
+_FOSC_ECIO                        00003FEF
+_FOSC_EXTRCCLK                    00003FFF
+_FOSC_EXTRCIO                     00003FFE
+_FOSC_HS                          00003FEE
+_FOSC_INTOSCCLK                   00003FFD
+_FOSC_INTOSCIO                    00003FFC
+_FOSC_LP                          00003FEC
+_FOSC_XT                          00003FED
+_HS_OSC                           00003FEE
+_IDLOC0                           00002000
+_IDLOC1                           00002001
+_IDLOC2                           00002002
+_IDLOC3                           00002003
+_INTOSC_OSC_CLKOUT                00003FFD
+_INTOSC_OSC_NOCLKOUT              00003FFC
+_INTRC_OSC_CLKOUT                 00003FFD
+_INTRC_OSC_NOCLKOUT               00003FFC
+_LP_OSC                           00003FEC
+_LVP_OFF                          00003F7F
+_LVP_ON                           00003FFF
+_MCLRE_OFF                        00003FDF
+_MCLRE_ON                         00003FFF
+_PWRTE_OFF                        00003FFF
+MPASM  5.44                          MAIN.ASM   12-15-2019  10:40:53         PAGE  8
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_PWRTE_ON                         00003FF7
+_RC_OSC_CLKOUT                    00003FFF
+_RC_OSC_NOCLKOUT                  00003FFE
+_WDTE_OFF                         00003FFB
+_WDTE_ON                          00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FED
+__16F648A                         00000001
+contb                             00000020
+loops                             00000021
+loops2                            00000022
+ptoa                              00000005
+ptob                              00000006
+pulsa                             00000025
+retardo                           00000008
+status                            00000003
+top                               0000000C
+top2                              0000000A
+trisa                             00000085
+trisb                             00000086
+z                                 00000002
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     5 reported,     0 suppressed
+
+
