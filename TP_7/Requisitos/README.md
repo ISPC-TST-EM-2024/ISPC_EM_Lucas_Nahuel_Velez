@@ -1,5 +1,5 @@
 - - ![](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT93k_IB58yrqU35nkrenk7t3-pKrO2PDzidQ&s)
-# Electronica Microcontrolada 
+# *Electronica Microcontrolada*
 - - - 
 
 ##### Profesor:  Gonzalo Vera
